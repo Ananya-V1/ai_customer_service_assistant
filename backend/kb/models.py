@@ -84,6 +84,34 @@ class Conversation(models.Model):
         return f"Conversation {self.pk}"
 
 
+class Order(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_SHIPPED = "shipped"
+    STATUS_DELIVERED = "delivered"
+    STATUS_REFUNDED = "refunded"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_SHIPPED, "Shipped"),
+        (STATUS_DELIVERED, "Delivered"),
+        (STATUS_REFUNDED, "Refunded"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    customer_name = models.CharField(max_length=255)
+    product_name = models.CharField(max_length=255)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    order_date = models.DateField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        db_table = "orders"
+        ordering = ["-order_date"]
+
+    def __str__(self):
+        return f"Order {self.pk}: {self.customer_name} / {self.product_name}"
+
+
 class Message(models.Model):
     ROLE_USER = "user"
     ROLE_ASSISTANT = "assistant"

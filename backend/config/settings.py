@@ -107,3 +107,13 @@ RAG_HISTORY_TURNS = int(os.environ.get("RAG_HISTORY_TURNS", "6"))
 
 CHUNK_SIZE_WORDS = int(os.environ.get("CHUNK_SIZE_WORDS", "1000"))
 CHUNK_OVERLAP_WORDS = int(os.environ.get("CHUNK_OVERLAP_WORDS", "150"))
+
+# --- Multi-agent query router / guardrails ---
+AGENT_MAX_QUESTION_LENGTH = int(os.environ.get("AGENT_MAX_QUESTION_LENGTH", "1000"))
+AGENT_MAX_ANSWER_LENGTH = int(os.environ.get("AGENT_MAX_ANSWER_LENGTH", "4000"))
+AGENT_SQL_MAX_ROWS = int(os.environ.get("AGENT_SQL_MAX_ROWS", "50"))
+AGENT_SQL_ALLOWED_TABLES = ["orders"]
+AGENT_RETRY_WIDEN_TOP_K_MULTIPLIER = float(os.environ.get("AGENT_RETRY_WIDEN_TOP_K_MULTIPLIER", "2.0"))
+AGENT_RETRY_WIDEN_DISTANCE_MULTIPLIER = float(
+    os.environ.get("AGENT_RETRY_WIDEN_DISTANCE_MULTIPLIER", "1.5")
+)

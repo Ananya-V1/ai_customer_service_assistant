@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Conversation, Document, DocumentChunk, KnowledgeBase, Message
+from .models import Conversation, Document, DocumentChunk, KnowledgeBase, Message, Order
 
 
 @admin.register(KnowledgeBase)
@@ -30,3 +30,10 @@ class ConversationAdmin(admin.ModelAdmin):
 class MessageAdmin(admin.ModelAdmin):
     list_display = ("conversation", "role", "created_at")
     list_filter = ("role",)
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ("id", "customer_name", "product_name", "status", "order_date", "amount")
+    list_filter = ("status",)
+    search_fields = ("customer_name", "product_name")
