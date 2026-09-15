@@ -1,0 +1,82 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-csagent}
+      POSTGRES_USER: ${POSTGRES_USER:-csagent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-csagent}
+    ports:
+      - "25001:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-csagent}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  db-ui:
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+    ports:
+      - "25002:80"
+    depends_on:
+      - db
+
+  ollama:
+    image: ollama/ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+
+  ollama-init:
+    image: ollama/ollama
+    depends_on:
+      - ollama
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until ollama list --host http://ollama:11434 >/dev/null 2>&1; do
+          echo "waiting for ollama..."; sleep 2;
+        done
+        OLLAMA_HOST=http://ollama:11434 ollama pull nomic-embed-text
+        OLLAMA_HOST=http://ollama:11434 ollama pull llama3.1
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-csagent}
+      DB_USER: ${POSTGRES_USER:-csagent}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-csagent}
+      OLLAMA_BASE_URL: http://ollama:11434
+    ports:
+      - "25003:8000"
+    volumes:
+      - media_data:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "25004:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
+  ollama_data:
+  media_data:
