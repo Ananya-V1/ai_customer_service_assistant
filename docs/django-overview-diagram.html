@@ -1,0 +1,205 @@
+<title>Django, in one page</title>
+<style>
+  :root {
+    --bg: #F1F4F5;
+    --surface: #FFFFFF;
+    --ink: #131F29;
+    --ink-soft: #4A5A63;
+    --ink-faint: #7C8A92;
+    --border: #C7D0D4;
+    --accent: #2F7A6E;      /* teal — request-cycle pieces */
+    --accent-soft: #E4EEEC;
+    --accent2: #B5762A;     /* copper — setup-time pieces */
+    --accent2-soft: #F3E7D8;
+    --shadow: 0 1px 2px rgba(19,31,41,0.06), 0 8px 24px -12px rgba(19,31,41,0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0D1620; --surface: #121F29; --ink: #E7EDEF; --ink-soft: #93A3AC;
+      --ink-faint: #64747D; --border: #253440; --accent: #4FBFA8; --accent-soft: #16302B;
+      --accent2: #D99A52; --accent2-soft: #2E2415;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0D1620; --surface: #121F29; --ink: #E7EDEF; --ink-soft: #93A3AC;
+    --ink-faint: #64747D; --border: #253440; --accent: #4FBFA8; --accent-soft: #16302B;
+    --accent2: #D99A52; --accent2-soft: #2E2415;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+  :root[data-theme="light"] {
+    --bg: #F1F4F5; --surface: #FFFFFF; --ink: #131F29; --ink-soft: #4A5A63;
+    --ink-faint: #7C8A92; --border: #C7D0D4; --accent: #2F7A6E; --accent-soft: #E4EEEC;
+    --accent2: #B5762A; --accent2-soft: #F3E7D8;
+    --shadow: 0 1px 2px rgba(19,31,41,0.06), 0 8px 24px -12px rgba(19,31,41,0.12);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { padding: clamp(24px, 5vw, 64px) 20px 80px; }
+  .page { max-width: 860px; margin: 0 auto; }
+
+  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 0 0 10px; }
+  h1 { font-size: clamp(24px, 4vw, 30px); line-height: 1.2; margin: 0 0 12px; text-wrap: balance; letter-spacing: -0.01em; }
+  .dek { font-size: 15px; line-height: 1.6; color: var(--ink-soft); max-width: 62ch; margin: 0; }
+
+  /* request cycle strip */
+  .cycle {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+    margin: 32px 0 8px; padding: 18px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); box-shadow: var(--shadow);
+  }
+  .cnode {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", monospace;
+    font-size: 12.5px; font-weight: 600; padding: 7px 12px; border-radius: 5px;
+    border: 1px solid var(--border); color: var(--ink-soft); white-space: nowrap;
+  }
+  .cnode.hit { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+  .carrow { color: var(--ink-faint); font-size: 13px; }
+  .cycle-caption { font-size: 12px; color: var(--ink-faint); margin: 10px 2px 0; }
+
+  .section-head { margin: 52px 0 18px; }
+  .section-head .tag {
+    display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 999px; margin-bottom: 10px;
+  }
+  .section-a .tag { background: var(--accent-soft); color: var(--accent); }
+  .section-b .tag { background: var(--accent2-soft); color: var(--accent2); }
+  .section-title { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 4px; }
+  .section-sub { font-size: 13.5px; color: var(--ink-soft); margin: 0; max-width: 60ch; }
+
+  .grid { display: grid; gap: 16px; }
+  .grid.g4 { grid-template-columns: repeat(2, 1fr); }
+  .grid.g3 { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 680px) {
+    .grid.g4, .grid.g3 { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: var(--shadow); padding: 18px 20px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .file-name {
+    font-family: ui-monospace, "SF Mono", monospace; font-size: 14.5px; font-weight: 700; color: var(--ink);
+  }
+  .role { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .section-a .role { color: var(--accent); }
+  .section-b .role { color: var(--accent2); }
+  .card p.def { font-size: 13px; line-height: 1.55; color: var(--ink-soft); margin: 0; }
+  .card p.def b { color: var(--ink); }
+
+  pre.snip {
+    margin: 0; padding: 10px 12px; border-radius: 6px; overflow-x: auto;
+    background: var(--bg); border: 1px solid var(--border);
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", monospace;
+    font-size: 11.5px; line-height: 1.55; color: var(--ink);
+  }
+  .section-a pre.snip { border-left: 3px solid var(--accent); }
+  .section-b pre.snip { border-left: 3px solid var(--accent2); }
+
+  .why { font-size: 11.5px; color: var(--ink-faint); line-height: 1.5; margin: 0; }
+  .why b { color: var(--ink-soft); }
+
+  .legend { display: flex; gap: 20px; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); }
+  .swatch { width: 14px; height: 3px; border-radius: 2px; }
+  .swatch.a { background: var(--accent); }
+  .swatch.b { background: var(--accent2); }
+</style>
+
+<div class="page">
+  <p class="eyebrow">Framework overview</p>
+  <h1>Django, in one page</h1>
+  <p class="dek">Four files handle every request. Three more exist purely to save you work — they're built from the same models, but never run while a request is in flight. Examples below are pulled straight from this project's <b>backend/</b> folder.</p>
+
+  <div class="cycle">
+    <div class="cnode">Browser / Angular app</div>
+    <span class="carrow">&#8594;</span>
+    <div class="cnode hit">urls.py</div>
+    <span class="carrow">&#8594;</span>
+    <div class="cnode hit">views.py</div>
+    <span class="carrow">&#8594;</span>
+    <div class="cnode hit">models.py &#8596; database</div>
+    <span class="carrow">&#8594;</span>
+    <div class="cnode">JSON response</div>
+  </div>
+  <p class="cycle-caption">This same loop runs for every single request — a chat message, a document upload, a login.</p>
+
+  <div class="section-head section-a">
+    <span class="tag">Hit on every request</span>
+    <div class="section-title">The four pieces that handle a request</div>
+    <p class="section-sub">Routing, logic, data, and shape — each request passes through all four in order.</p>
+  </div>
+
+  <div class="grid g4 section-a">
+    <div class="card">
+      <div class="card-top"><span class="file-name">urls.py</span><span class="role">routing</span></div>
+      <p class="def">Matches an incoming URL to a view. Nothing more — no logic lives here.</p>
+      <pre class="snip">path("chat/", ChatView.as_view())
+router.register("documents", DocumentViewSet)</pre>
+      <p class="why"><b>Why:</b> keeps "which code runs for this path" in one readable list, separate from the code itself.</p>
+    </div>
+    <div class="card">
+      <div class="card-top"><span class="file-name">views.py</span><span class="role">logic</span></div>
+      <p class="def">Decides what happens for a request — reads input, calls into models/services, builds a response.</p>
+      <pre class="snip">class ChatView(APIView):
+    def post(self, request):
+        ...</pre>
+      <p class="why"><b>Why:</b> the one place request-specific decisions get made — everything else is reusable plumbing.</p>
+    </div>
+    <div class="card">
+      <div class="card-top"><span class="file-name">models.py</span><span class="role">data</span></div>
+      <p class="def">Python classes that map 1:1 to database tables — this is Django's ORM (object-relational mapper).</p>
+      <pre class="snip">class KnowledgeBase(models.Model):
+    name = models.CharField(max_length=255)</pre>
+      <p class="why"><b>Why:</b> you query and save data with normal Python, never hand-writing SQL.</p>
+    </div>
+    <div class="card">
+      <div class="card-top"><span class="file-name">serializers.py</span><span class="role">shape</span></div>
+      <p class="def">Converts between a model instance and JSON, in both directions, with validation on the way in.</p>
+      <pre class="snip">class DocumentSerializer(ModelSerializer):
+    class Meta:
+        model = Document</pre>
+      <p class="why"><b>Why:</b> the JSON contract for the API lives in one place, decoupled from the DB schema.</p>
+    </div>
+  </div>
+
+  <div class="section-head section-b">
+    <span class="tag">Setup-time, not per-request</span>
+    <div class="section-title">Three more pieces, all built from your models</div>
+    <p class="section-sub">None of these run while handling a live request — they generate tooling and configuration ahead of time.</p>
+  </div>
+
+  <div class="grid g3 section-b">
+    <div class="card">
+      <div class="card-top"><span class="file-name">admin.py</span><span class="role">free UI</span></div>
+      <p class="def">A CRUD web page auto-built from a model's fields — no HTML written by hand.</p>
+      <pre class="snip">@admin.register(KnowledgeBase)
+class KnowledgeBaseAdmin(ModelAdmin):
+    list_display = ("name", "slug")</pre>
+      <p class="why"><b>Why:</b> instant internal tooling for staff, for free, from code you already wrote.</p>
+    </div>
+    <div class="card">
+      <div class="card-top"><span class="file-name">migrations/</span><span class="role">schema history</span></div>
+      <p class="def">Generated by diffing your models against the last-known schema — one file per change.</p>
+      <pre class="snip">migrations.CreateModel(
+    name="KnowledgeBase", fields=[...])</pre>
+      <p class="why"><b>Why:</b> every environment (yours, CI, prod) replays the same steps and ends up identical.</p>
+    </div>
+    <div class="card">
+      <div class="card-top"><span class="file-name">settings.py</span><span class="role">the glue</span></div>
+      <p class="def">Central config: database connection, installed apps, middleware — wires the other six together.</p>
+      <pre class="snip">DATABASES = {"default": {
+    "ENGINE": "django.db.backends.postgresql"}}</pre>
+      <p class="why"><b>Why:</b> one file to change environments (local vs. Docker vs. prod) without touching app code.</p>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="swatch a"></span> runs on every request</div>
+    <div class="legend-item"><span class="swatch b"></span> runs once, ahead of time</div>
+  </div>
+</div>

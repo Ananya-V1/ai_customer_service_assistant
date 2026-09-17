@@ -1,0 +1,396 @@
+<title>How the database fits together</title>
+<style>
+  :root {
+    --bg: #F1F4F5;
+    --surface: #FFFFFF;
+    --ink: #131F29;
+    --ink-soft: #4A5A63;
+    --ink-faint: #7C8A92;
+    --border: #C7D0D4;
+    --accent: #2F7A6E;      /* teal — content pipeline */
+    --accent-soft: #E4EEEC;
+    --accent2: #B5762A;     /* copper — chat pipeline + embedding spotlight */
+    --accent2-soft: #F3E7D8;
+    --shadow: 0 1px 2px rgba(19,31,41,0.06), 0 8px 24px -12px rgba(19,31,41,0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0D1620;
+      --surface: #121F29;
+      --ink: #E7EDEF;
+      --ink-soft: #93A3AC;
+      --ink-faint: #64747D;
+      --border: #253440;
+      --accent: #4FBFA8;
+      --accent-soft: #16302B;
+      --accent2: #D99A52;
+      --accent2-soft: #2E2415;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0D1620;
+    --surface: #121F29;
+    --ink: #E7EDEF;
+    --ink-soft: #93A3AC;
+    --ink-faint: #64747D;
+    --border: #253440;
+    --accent: #4FBFA8;
+    --accent-soft: #16302B;
+    --accent2: #D99A52;
+    --accent2-soft: #2E2415;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+  :root[data-theme="light"] {
+    --bg: #F1F4F5;
+    --surface: #FFFFFF;
+    --ink: #131F29;
+    --ink-soft: #4A5A63;
+    --ink-faint: #7C8A92;
+    --border: #C7D0D4;
+    --accent: #2F7A6E;
+    --accent-soft: #E4EEEC;
+    --accent2: #B5762A;
+    --accent2-soft: #F3E7D8;
+    --shadow: 0 1px 2px rgba(19,31,41,0.06), 0 8px 24px -12px rgba(19,31,41,0.12);
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  body {
+    padding: clamp(24px, 5vw, 64px) 20px 80px;
+  }
+  .page {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  .masthead {
+    margin-bottom: 40px;
+  }
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-size: clamp(24px, 4vw, 30px);
+    line-height: 1.2;
+    margin: 0 0 12px;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+  .dek {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 56ch;
+    margin: 0;
+  }
+
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-head .tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .table-name {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", monospace;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .table-name .flow-a { color: var(--accent); }
+  .table-name .flow-b { color: var(--accent2); }
+
+  .card-body {
+    padding: 16px 18px 14px;
+  }
+  .caption {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    margin: 0 0 12px;
+    max-width: 52ch;
+  }
+
+  table.rows {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", monospace;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .rows-wrap { overflow-x: auto; }
+  table.rows th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--ink-faint);
+    padding: 0 10px 6px 0;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+  table.rows td {
+    padding: 6px 10px 6px 0;
+    color: var(--ink);
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+  table.rows tr:last-child td { border-bottom: none; }
+  td.truncate, th.truncate { white-space: normal; max-width: 220px; }
+  .spotlight {
+    color: var(--accent2);
+    font-style: italic;
+  }
+  .footnote {
+    margin: 10px 0 0;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--ink-faint);
+    font-family: ui-sans-serif, -apple-system, sans-serif;
+  }
+  .footnote b { color: var(--accent2); font-weight: 600; }
+
+  .chip-ref {
+    display: inline-block;
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: var(--accent2-soft);
+    color: var(--accent2);
+    margin-left: 6px;
+  }
+
+  /* connectors */
+  .connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0;
+    gap: 0;
+  }
+  .connector .stem {
+    width: 2px;
+    height: 16px;
+    background: var(--line-color, var(--border));
+  }
+  .connector.dashed .stem {
+    background: none;
+    border-left: 2px dashed var(--ink-faint);
+    width: 0;
+  }
+  .connector .label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--line-color, var(--ink-soft));
+    background: var(--bg);
+    border: 1px solid var(--line-color, var(--border));
+    border-radius: 999px;
+    padding: 3px 12px;
+    margin: 2px 0;
+    white-space: nowrap;
+  }
+  .connector.narrative .label {
+    font-style: italic;
+    font-weight: 500;
+    color: var(--ink-faint);
+    border-color: var(--border);
+    background: transparent;
+  }
+  .connector .arrow {
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid var(--line-color, var(--border));
+  }
+  .connector.flow-a { --line-color: var(--accent); }
+  .connector.flow-b { --line-color: var(--accent2); }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    margin-top: 44px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .swatch {
+    width: 14px;
+    height: 3px;
+    border-radius: 2px;
+  }
+  .swatch.a { background: var(--accent); }
+  .swatch.b { background: var(--accent2); }
+  .swatch.c { background: none; border-top: 2px dashed var(--ink-faint); width: 14px; }
+</style>
+
+<div class="page">
+  <div class="masthead">
+    <p class="eyebrow">Schema, plainly</p>
+    <h1>Five tables, two jobs: store what you upload, remember what people ask</h1>
+    <p class="dek">Read top to bottom. The first three tables hold uploaded documents; the last two hold chat sessions. They meet at the dashed line, where a question gets matched to the pieces of text most likely to answer it.</p>
+  </div>
+
+  <div class="flow">
+
+    <div class="card">
+      <div class="card-head">
+        <span class="table-name"><span class="flow-a">knowledge_base</span></span>
+        <span class="tag">table</span>
+      </div>
+      <div class="card-body">
+        <p class="caption">A topic folder for related documents — e.g. "Billing," "Shipping."</p>
+        <div class="rows-wrap">
+          <table class="rows">
+            <tr><th>id</th><th>name</th><th>slug</th></tr>
+            <tr><td>1</td><td>Billing</td><td>billing</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector flow-a">
+      <div class="stem"></div>
+      <div class="label">holds many</div>
+      <div class="arrow"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="table-name"><span class="flow-a">document</span></span>
+        <span class="tag">table</span>
+      </div>
+      <div class="card-body">
+        <p class="caption">One row per PDF uploaded into a folder, and whether it's finished processing.</p>
+        <div class="rows-wrap">
+          <table class="rows">
+            <tr><th>id</th><th>knowledge_base_id</th><th>title</th><th>status</th></tr>
+            <tr><td>1</td><td>1</td><td>Refund&nbsp;Policy.pdf</td><td>ready</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector flow-a">
+      <div class="stem"></div>
+      <div class="label">cut into pieces</div>
+      <div class="arrow"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="table-name"><span class="flow-a">document_chunk</span></span>
+        <span class="tag">table</span>
+      </div>
+      <div class="card-body">
+        <p class="caption">One row per paragraph-sized slice of a PDF, plus a "meaning fingerprint" used to search by topic instead of exact words.</p>
+        <div class="rows-wrap">
+          <table class="rows">
+            <tr><th>id</th><th>document_id</th><th class="truncate">text</th><th class="truncate">embedding</th></tr>
+            <tr>
+              <td>1</td><td>1</td>
+              <td class="truncate">"Refunds are issued within 14 days…"</td>
+              <td class="truncate spotlight">[0.02, −0.18, … 768 numbers]</td>
+            </tr>
+          </table>
+        </div>
+        <p class="footnote"><b>embedding</b> isn't meant to be read — it's 768 numbers encoding what the text means, so similar-meaning text can be found later even if the wording differs.</p>
+      </div>
+    </div>
+
+    <div class="connector dashed narrative">
+      <div class="stem"></div>
+      <div class="label">meanwhile, someone starts a chat</div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="table-name"><span class="flow-b">conversation</span></span>
+        <span class="tag">table</span>
+      </div>
+      <div class="card-body">
+        <p class="caption">One row per chat session.</p>
+        <div class="rows-wrap">
+          <table class="rows">
+            <tr><th>id</th><th>created_at</th></tr>
+            <tr><td>1</td><td>2026-08-01</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector flow-b">
+      <div class="stem"></div>
+      <div class="label">holds many</div>
+      <div class="arrow"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="table-name"><span class="flow-b">message</span></span>
+        <span class="tag">table</span>
+      </div>
+      <div class="card-body">
+        <p class="caption">One row per message — the user's question, or the bot's reply.</p>
+        <div class="rows-wrap">
+          <table class="rows">
+            <tr><th>id</th><th>role</th><th class="truncate">content</th><th>sources</th></tr>
+            <tr><td>1</td><td>user</td><td class="truncate">"How long do refunds take?"</td><td>—</td></tr>
+            <tr>
+              <td>2</td><td>assistant</td>
+              <td class="truncate">"Refunds are issued within 14 days…"</td>
+              <td><span class="chip-ref">chunk #1</span></td>
+            </tr>
+          </table>
+        </div>
+        <p class="footnote">The reply's <b>sources</b> field is copied straight from whichever <b>document_chunk</b> matched the question — that's the loop closing back to the top.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="swatch a"></span> content pipeline (what you upload)</div>
+    <div class="legend-item"><span class="swatch b"></span> chat pipeline (what people ask)</div>
+    <div class="legend-item"><span class="swatch c"></span> not a real link — just the story order</div>
+  </div>
+</div>

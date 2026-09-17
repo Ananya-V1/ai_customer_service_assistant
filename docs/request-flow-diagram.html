@@ -1,0 +1,237 @@
+<title>How a request flows through the system</title>
+<style>
+  :root {
+    --bg: #F1F4F5;
+    --surface: #FFFFFF;
+    --ink: #131F29;
+    --ink-soft: #4A5A63;
+    --ink-faint: #7C8A92;
+    --border: #C7D0D4;
+    --accent: #2F7A6E;      /* teal — ingestion path */
+    --accent-soft: #E4EEEC;
+    --accent2: #B5762A;     /* copper — chat path */
+    --accent2-soft: #F3E7D8;
+    --dead: #8B99A3;        /* neutral — short-circuit branch */
+    --shadow: 0 1px 2px rgba(19,31,41,0.06), 0 8px 24px -12px rgba(19,31,41,0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0D1620; --surface: #121F29; --ink: #E7EDEF; --ink-soft: #93A3AC;
+      --ink-faint: #64747D; --border: #253440; --accent: #4FBFA8; --accent-soft: #16302B;
+      --accent2: #D99A52; --accent2-soft: #2E2415; --dead: #5B6A73;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0D1620; --surface: #121F29; --ink: #E7EDEF; --ink-soft: #93A3AC;
+    --ink-faint: #64747D; --border: #253440; --accent: #4FBFA8; --accent-soft: #16302B;
+    --accent2: #D99A52; --accent2-soft: #2E2415; --dead: #5B6A73;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+  :root[data-theme="light"] {
+    --bg: #F1F4F5; --surface: #FFFFFF; --ink: #131F29; --ink-soft: #4A5A63;
+    --ink-faint: #7C8A92; --border: #C7D0D4; --accent: #2F7A6E; --accent-soft: #E4EEEC;
+    --accent2: #B5762A; --accent2-soft: #F3E7D8; --dead: #8B99A3;
+    --shadow: 0 1px 2px rgba(19,31,41,0.06), 0 8px 24px -12px rgba(19,31,41,0.12);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { padding: clamp(24px, 5vw, 64px) 20px 80px; }
+  .page { max-width: 720px; margin: 0 auto; }
+
+  .masthead { margin-bottom: 20px; }
+  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 0 0 10px; }
+  h1 { font-size: clamp(24px, 4vw, 30px); line-height: 1.2; margin: 0 0 12px; text-wrap: balance; letter-spacing: -0.01em; }
+  .dek { font-size: 15px; line-height: 1.6; color: var(--ink-soft); max-width: 58ch; margin: 0; }
+
+  .actors {
+    display: flex; flex-wrap: wrap; gap: 8px 18px;
+    margin: 22px 0 40px; padding: 14px 16px;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--surface);
+  }
+  .actor { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink-soft); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-faint); flex: none; }
+
+  .section-head {
+    display: flex; align-items: baseline; gap: 12px; margin: 48px 0 18px;
+  }
+  .section-head:first-of-type { margin-top: 0; }
+  .num {
+    font-family: ui-monospace, "SF Mono", monospace; font-size: 13px; font-weight: 700;
+    width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    flex: none; color: var(--bg);
+  }
+  .section-a .num { background: var(--accent); }
+  .section-b .num { background: var(--accent2); }
+  .section-title { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+  .section-sub { font-size: 13px; color: var(--ink-faint); margin: 2px 0 0; }
+
+  .flow { display: flex; flex-direction: column; align-items: stretch; }
+
+  .step {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    box-shadow: var(--shadow); padding: 14px 18px;
+  }
+  .step-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .chip {
+    font-family: ui-monospace, "SF Mono", monospace; font-size: 11px; font-weight: 600;
+    padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  }
+  .section-a .chip { background: var(--accent-soft); color: var(--accent); }
+  .section-b .chip { background: var(--accent2-soft); color: var(--accent2); }
+  .step-title { font-size: 14.5px; font-weight: 600; margin: 0 0 6px; }
+  .step-detail { font-size: 13px; line-height: 1.55; color: var(--ink-soft); margin: 0; max-width: 56ch; }
+  .step-ref {
+    display: block; margin-top: 8px; font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 11px; color: var(--ink-faint);
+  }
+
+  .connector { display: flex; flex-direction: column; align-items: center; padding: 8px 0; }
+  .connector .stem { width: 2px; height: 14px; background: var(--line-color, var(--border)); }
+  .connector .label {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; color: var(--line-color, var(--ink-soft));
+    background: var(--bg); border: 1px solid var(--line-color, var(--border)); border-radius: 999px;
+    padding: 2px 10px; margin: 2px 0; white-space: nowrap; text-align: center;
+  }
+  .connector .arrow {
+    width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent;
+    border-top: 6px solid var(--line-color, var(--border));
+  }
+  .section-a .connector { --line-color: var(--accent); }
+  .section-b .connector { --line-color: var(--accent2); }
+
+  .fork-rule {
+    width: 64%; height: 1px; background: var(--border); margin: 0 auto;
+  }
+  .branch-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 14px 0;
+  }
+  .mini {
+    border-radius: 6px; padding: 12px 14px; font-size: 12.5px; line-height: 1.5;
+    border: 1px solid var(--border);
+  }
+  .mini.dead { background: transparent; border-color: var(--dead); }
+  .mini.dead .mini-tag { color: var(--dead); }
+  .mini.live { background: var(--accent2-soft); border-color: var(--accent2); }
+  .mini.live .mini-tag { color: var(--accent2); }
+  .mini-tag {
+    display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .mini p { margin: 0; color: var(--ink-soft); }
+  .mini b { color: var(--ink); }
+
+  .legend { display: flex; gap: 20px; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); }
+  .swatch { width: 14px; height: 3px; border-radius: 2px; }
+  .swatch.a { background: var(--accent); }
+  .swatch.b { background: var(--accent2); }
+  .swatch.c { background: var(--dead); }
+</style>
+
+<div class="page">
+  <div class="masthead">
+    <p class="eyebrow">Request flow</p>
+    <h1>Two journeys through the same four pieces</h1>
+    <p class="dek">Every request in this app is one of two sequences below, moving between the same four actors: the Angular frontend, the Django backend, Ollama, and Postgres.</p>
+  </div>
+
+  <div class="actors">
+    <div class="actor"><span class="dot"></span>Frontend — Angular chat &amp; upload UI</div>
+    <div class="actor"><span class="dot"></span>Backend — Django + DRF views &amp; services</div>
+    <div class="actor"><span class="dot"></span>Ollama — local embedding &amp; chat model</div>
+    <div class="actor"><span class="dot"></span>Postgres — rows + pgvector search</div>
+  </div>
+
+  <div class="section-head section-a">
+    <span class="num">1</span>
+    <div>
+      <div class="section-title">Uploading a document</div>
+      <p class="section-sub">Admin-only. Runs synchronously — the request blocks until it's done.</p>
+    </div>
+  </div>
+
+  <div class="flow section-a">
+    <div class="step">
+      <div class="step-top"><span class="step-title">Admin submits a PDF</span><span class="chip">frontend → backend</span></div>
+      <p class="step-detail"><b>POST /api/documents/</b> — handled by <b>DocumentViewSet</b>, a DRF <code>ModelViewSet</code>.</p>
+      <span class="step-ref">backend/kb/views.py:38</span>
+    </div>
+    <div class="connector"><div class="stem"></div><div class="arrow"></div></div>
+    <div class="step">
+      <div class="step-top"><span class="step-title">The Document row is saved</span><span class="chip">backend → postgres</span></div>
+      <p class="step-detail"><b>perform_create()</b> writes title, file, knowledge base, and <b>status = "pending"</b>.</p>
+      <span class="step-ref">backend/kb/views.py:43-45</span>
+    </div>
+    <div class="connector"><div class="stem"></div><div class="arrow"></div></div>
+    <div class="step">
+      <div class="step-top"><span class="step-title">The PDF is extracted, chunked, embedded</span><span class="chip">backend → ollama</span></div>
+      <p class="step-detail"><b>ingest_document()</b> pulls text with <b>pypdf</b>, splits it into ~1000-word overlapping windows, and calls Ollama's <b>/api/embeddings</b> once per chunk.</p>
+      <span class="step-ref">backend/kb/services/ingestion.py</span>
+    </div>
+    <div class="connector"><div class="stem"></div><div class="arrow"></div></div>
+    <div class="step">
+      <div class="step-top"><span class="step-title">Chunks are stored, status flips to ready</span><span class="chip">backend → postgres</span></div>
+      <p class="step-detail">Every <b>DocumentChunk</b> (text + a 768-number vector) is bulk-saved in one transaction; <b>Document.status</b> becomes <b>"ready"</b> (or <b>"failed"</b> on error).</p>
+      <span class="step-ref">backend/kb/services/ingestion.py:40-46</span>
+    </div>
+  </div>
+
+  <div class="section-head section-b">
+    <span class="num">2</span>
+    <div>
+      <div class="section-title">Asking a question</div>
+      <p class="section-sub">Open to anyone. One HTTP round trip, but it branches internally.</p>
+    </div>
+  </div>
+
+  <div class="flow section-b">
+    <div class="step">
+      <div class="step-top"><span class="step-title">User sends a message</span><span class="chip">frontend → backend</span></div>
+      <p class="step-detail"><b>POST /api/chat/</b> with <b>{ message, conversation_id }</b> — handled by <b>ChatView</b>.</p>
+      <span class="step-ref">backend/kb/views.py:48-63</span>
+    </div>
+    <div class="connector"><div class="stem"></div><div class="arrow"></div></div>
+    <div class="step">
+      <div class="step-top"><span class="step-title">The question is embedded and matched</span><span class="chip">backend → ollama → postgres</span></div>
+      <p class="step-detail"><b>retrieve()</b> embeds the question, then searches every <b>DocumentChunk</b> by cosine distance across all knowledge bases, keeping the closest 5.</p>
+      <span class="step-ref">backend/kb/services/retrieval.py:16-31</span>
+    </div>
+    <div class="connector"><div class="stem"></div><div class="label">closest match ≤ 0.5 away?</div></div>
+
+    <div class="fork-rule"></div>
+    <div class="branch-grid">
+      <div class="mini dead">
+        <span class="mini-tag">No match close enough</span>
+        <p>Return the hardcoded line <b>"I don't have information about that."</b> No LLM call is made.</p>
+      </div>
+      <div class="mini live">
+        <span class="mini-tag">Match found</span>
+        <p>Matched chunks become context. System prompt + recent history + the question go to Ollama's <b>llama3.1</b> chat endpoint.</p>
+      </div>
+    </div>
+    <div class="fork-rule"></div>
+
+    <div class="connector"><div class="stem"></div><div class="label">either way</div><div class="arrow"></div></div>
+    <div class="step">
+      <div class="step-top"><span class="step-title">Answer and sources are saved</span><span class="chip">backend → postgres</span></div>
+      <p class="step-detail">Both the question and the reply are saved as <b>Message</b> rows — the assistant's <b>sources</b> field records exactly which chunks it drew from.</p>
+      <span class="step-ref">backend/kb/views.py:65-69</span>
+    </div>
+    <div class="connector"><div class="stem"></div><div class="arrow"></div></div>
+    <div class="step">
+      <div class="step-top"><span class="step-title">The reply appears in the chat</span><span class="chip">backend → frontend</span></div>
+      <p class="step-detail"><b>{ conversation_id, answer, sources }</b> comes back; Angular appends the assistant bubble and renders one chip per source underneath it.</p>
+      <span class="step-ref">frontend/src/app/pages/chat/chat-page.component.ts:148-154</span>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="swatch a"></span> ingestion path</div>
+    <div class="legend-item"><span class="swatch b"></span> chat path</div>
+    <div class="legend-item"><span class="swatch c"></span> short-circuit — no LLM call</div>
+  </div>
+</div>
