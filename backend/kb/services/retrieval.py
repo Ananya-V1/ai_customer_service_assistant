@@ -14,7 +14,11 @@ NO_INFO_ANSWER = "I don't have information about that."
 
 
 def retrieve(question, top_k=None, max_distance=None):
-    """Embed the question and return the closest DocumentChunks across all KBs."""
+    """Embed the question and return the closest DocumentChunks across all KBs.
+
+    Only chunks within max_distance of the question are returned, so weak
+    matches never reach the prompt or the sources.
+    """
     from ..models import DocumentChunk
 
     top_k = top_k or settings.RAG_TOP_K
@@ -28,9 +32,8 @@ def retrieve(question, top_k=None, max_distance=None):
         .select_related("document", "knowledge_base")[:top_k]
     )
 
-    if not chunks or chunks[0].distance > max_distance:
-        return []
-    return chunks
+    # keep only chunks close enough to the question (empty list means "refuse")
+    return [chunk for chunk in chunks if chunk.distance <= max_distance]
 
 
 def _build_context_block(chunks):
